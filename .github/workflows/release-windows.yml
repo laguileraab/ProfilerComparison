@@ -1,0 +1,40 @@
+# Builds the jpackage app image on Windows and attaches a zip to a GitHub Release.
+# Usage: git tag v1.0.1 && git push origin v1.0.1
+
+name: Release (Windows portable)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build with jpackage
+        run: mvn -B -Pdist clean package
+
+      - name: Zip XmlCompare folder
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          Compress-Archive -Path "target/dist/XmlCompare" -DestinationPath "XmlCompare-Windows-$ver.zip" -Force
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: XmlCompare-Windows-*.zip
+          generate_release_notes: true
